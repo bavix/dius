@@ -25,18 +25,23 @@ func fastSize(path string, info os.FileInfo) (uint64, error) {
 	var errSize error = nil
 	var wg sync.WaitGroup
 	for _, file := range files {
-		wg.Add(1)
+		if file.IsDir() {
+			wg.Add(1)
 
-		go func(f os.FileInfo) {
-			defer wg.Done()
-			res, err := fastSize(newPath, f)
-			if err != nil {
-				errSize = err
-			}
+			go func(f os.FileInfo) {
+				defer wg.Done()
+				res, err := fastSize(newPath, f)
+				if err != nil {
+					errSize = err
+				}
 
-			size += res
-		}(file)
+				size += res
+			}(file)
 
+			continue
+		}
+
+		size += uint64(info.Size())
 	}
 
 	wg.Wait()
