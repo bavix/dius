@@ -41,7 +41,7 @@ func fastSize(path string, info os.FileInfo) (uint64, error) {
 			continue
 		}
 
-		size += uint64(info.Size())
+		size += uint64(file.Size())
 	}
 
 	wg.Wait()
