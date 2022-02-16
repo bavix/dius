@@ -9,10 +9,32 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
+
+type WaitGroupCustom struct {
+	wg sync.WaitGroup
+}
+
+func (c *WaitGroupCustom) Inc() {
+	for runtime.NumGoroutine() == 10000 {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	c.wg.Add(1)
+}
+
+func (c *WaitGroupCustom) Done() {
+	c.wg.Done()
+}
+
+func (c *WaitGroupCustom) Wait() {
+	c.wg.Wait()
+}
 
 func fastSize(path string, info os.FileInfo) (uint64, error) {
 	if !info.IsDir() {
@@ -27,7 +49,7 @@ func fastSize(path string, info os.FileInfo) (uint64, error) {
 
 	var size uint64 = 0
 	var errSize error = nil
-	var wg sync.WaitGroup
+	var wg WaitGroupCustom
 	for _, file := range files {
 		if !file.IsDir() {
 			size += uint64(file.Size())
@@ -35,7 +57,7 @@ func fastSize(path string, info os.FileInfo) (uint64, error) {
 			continue
 		}
 
-		wg.Add(1)
+		wg.Inc()
 
 		go func(f os.FileInfo) {
 			defer wg.Done()
@@ -68,9 +90,9 @@ func main() {
 		return strings.Compare(files[i].Name(), files[j].Name()) == -1
 	})
 
-	var wg sync.WaitGroup
+	var wg WaitGroupCustom
 	for _, file := range files {
-		wg.Add(1)
+		wg.Inc()
 
 		go func(f os.FileInfo) {
 			defer wg.Done()
