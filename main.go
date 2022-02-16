@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/dustin/go-humanize"
+	"github.com/fatih/color"
 	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -62,6 +64,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	sort.SliceStable(files, func(i, j int) bool {
+		return strings.Compare(files[i].Name(), files[j].Name()) == -1
+	})
+
 	var wg sync.WaitGroup
 	for _, file := range files {
 		wg.Add(1)
@@ -69,11 +75,18 @@ func main() {
 		go func(f os.FileInfo) {
 			defer wg.Done()
 			bytes, err := fastSize(path, f)
-			if err != nil {
-				log.Fatal(err)
+			if err == nil {
+				line := fmt.Sprintf("%-7s %s\n", strings.ReplaceAll(humanize.Bytes(bytes), " ", ""), f.Name())
+				if f.IsDir() {
+					color.Blue(line)
+				} else if strings.HasPrefix(f.Name(), ".") {
+					color.Cyan(line)
+				} else {
+					color.White(line)
+				}
+			} else {
+				color.Red(err.Error())
 			}
-
-			fmt.Printf("%-7s %s\n", strings.ReplaceAll(humanize.Bytes(bytes), " ", ""), f.Name())
 		}(file)
 	}
 
