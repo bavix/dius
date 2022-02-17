@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
-	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -62,15 +60,12 @@ func fastSize(path string, info os.FileInfo) (uint64, error) {
 		go func(f os.FileInfo) {
 			defer wg.Done()
 
-			err := filepath.Walk(newPath+"/"+f.Name(),
-				func(_ string, fw fs.FileInfo, err error) error {
-					size += uint64(fw.Size())
-					return err
-				})
-
+			sum, err := fastSize(newPath, f)
 			if err != nil {
 				errSize = err
 			}
+
+			size += sum
 		}(file)
 	}
 
