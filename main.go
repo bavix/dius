@@ -15,23 +15,27 @@ import (
 )
 
 type WaitGroupCustom struct {
-	wg sync.WaitGroup
+	wg    sync.WaitGroup
+	mutex sync.Mutex
 }
 
 func (c *WaitGroupCustom) Inc() {
-	for runtime.NumGoroutine() == 10000 {
-		time.Sleep(5 * time.Millisecond)
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	for runtime.NumGoroutine() > 1000 {
+		time.Sleep(time.Millisecond)
 	}
 
 	c.wg.Add(1)
 }
 
 func (c *WaitGroupCustom) Done() {
-	c.wg.Done()
+	defer c.wg.Done()
 }
 
 func (c *WaitGroupCustom) Wait() {
-	c.wg.Wait()
+	defer c.wg.Wait()
 }
 
 func fastSize(path string, info os.FileInfo) (uint64, error) {
