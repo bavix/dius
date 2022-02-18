@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bavix/dius/internal/wgi"
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"io/ioutil"
@@ -9,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 )
 
 func fastSize(path string, info os.FileInfo) (uint64, error) {
@@ -25,7 +25,7 @@ func fastSize(path string, info os.FileInfo) (uint64, error) {
 
 	var errSize error = nil
 	var size uint64 = 0
-	var wg sync.WaitGroup
+	var wg wgi.WaitGroup
 	for _, file := range files {
 		if !file.IsDir() {
 			size += uint64(file.Size())
@@ -50,8 +50,22 @@ func fastSize(path string, info os.FileInfo) (uint64, error) {
 	return size, errSize
 }
 
+func shortPath(base, path string) string {
+	newPath, _ := filepath.Rel(base, path)
+	if newPath == "." {
+		return newPath
+	}
+
+	if filepath.ToSlash(base) == filepath.Dir(path) {
+		return filepath.Base(path)
+	}
+
+	return path
+}
+
 func main() {
-	path, _ := os.Getwd()
+	pwd, _ := os.Getwd()
+	path := pwd
 	if len(os.Args) > 1 {
 		path = os.Args[1]
 	}
@@ -61,7 +75,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var wg sync.WaitGroup
+	var total uint64
+	var wg wgi.WaitGroup
 	for _, file := range files {
 		wg.Add(1)
 
@@ -73,7 +88,12 @@ func main() {
 				return
 			}
 
-			line := fmt.Sprintf("%-7s %s\n", strings.ReplaceAll(humanize.Bytes(bytes), " ", ""), f.Name())
+			total += bytes
+			line := fmt.Sprintf(
+				"%-7s %s\n",
+				strings.ReplaceAll(humanize.IBytes(bytes), " ", ""),
+				shortPath(pwd, filepath.Join(path, f.Name())))
+
 			if f.IsDir() {
 				color.Blue(line)
 			} else if strings.HasPrefix(f.Name(), ".") {
@@ -85,4 +105,9 @@ func main() {
 	}
 
 	wg.Wait()
+
+	color.Green(
+		fmt.Sprintf("%-7s %s\n",
+			strings.ReplaceAll(humanize.IBytes(total), " ", ""),
+			shortPath(pwd, path)))
 }
