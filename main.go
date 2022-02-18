@@ -90,7 +90,7 @@ func main() {
 
 			total += bytes
 			line := fmt.Sprintf(
-				"%-7s %s\n",
+				"%-8s %s\n",
 				strings.ReplaceAll(humanize.IBytes(bytes), " ", ""),
 				shortPath(pwd, filepath.Join(path, f.Name())))
 
