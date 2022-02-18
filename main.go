@@ -107,7 +107,7 @@ func main() {
 	wg.Wait()
 
 	color.Green(
-		fmt.Sprintf("%-7s %s\n",
+		fmt.Sprintf("%-8s %s\n",
 			strings.ReplaceAll(humanize.IBytes(total), " ", ""),
 			shortPath(pwd, path)))
 }
