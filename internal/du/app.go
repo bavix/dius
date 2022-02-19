@@ -35,10 +35,22 @@ func Execute(_ *cobra.Command, args []string) {
 		path = args[0]
 	}
 
-	files, err := ioutil.ReadDir(path)
-	for attempts := 0; attempts < 10 && err != nil; attempts++ {
-		time.Sleep(time.Millisecond * 50)
+	var files []os.FileInfo
+	pathInfo, err := os.Stat(path)
+	pathExists := !os.IsNotExist(err)
+	pathIsFile := pathExists && pathInfo.Mode().IsRegular()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if pathIsFile {
+		files = append(files, pathInfo)
+	} else {
 		files, err = ioutil.ReadDir(path)
+		for attempts := 0; attempts < 10 && err != nil; attempts++ {
+			time.Sleep(time.Millisecond * 50)
+			files, err = ioutil.ReadDir(path)
+		}
 	}
 
 	if err != nil {
@@ -59,11 +71,16 @@ func Execute(_ *cobra.Command, args []string) {
 				return
 			}
 
+			filename := filepath.Join(path, fi.Name())
+			if pathIsFile {
+				filename = path
+			}
+
 			total += bytes
 			line := fmt.Sprintf(
 				"%-8s %s\n",
 				strings.ReplaceAll(humanize.IBytes(bytes), " ", ""),
-				shortPath(pwd, filepath.Join(path, fi.Name())))
+				shortPath(pwd, filename))
 
 			if fi.IsDir() {
 				color.Blue(line)
@@ -77,8 +94,10 @@ func Execute(_ *cobra.Command, args []string) {
 
 	wg.Wait()
 
-	color.Green(
-		fmt.Sprintf("%-8s %s\n",
-			strings.ReplaceAll(humanize.IBytes(total), " ", ""),
-			shortPath(pwd, path)))
+	if pathIsFile {
+		color.Green(
+			fmt.Sprintf("%-8s %s\n",
+				strings.ReplaceAll(humanize.IBytes(total), " ", ""),
+				shortPath(pwd, path)))
+	}
 }

@@ -51,7 +51,7 @@ func fastSize(path string, info os.FileInfo) (uint64, error) {
 	newPath := filepath.Join(path, info.Name())
 	files, err := ioutil.ReadDir(newPath)
 	for attempts := 0; attempts < 20 && err != nil; attempts++ {
-		time.Sleep(time.Millisecond * 20)
+		time.Sleep(time.Millisecond * 50)
 		files, err = ioutil.ReadDir(newPath)
 	}
 

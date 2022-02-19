@@ -2,7 +2,7 @@ package wgi
 
 import (
 	"math/rand"
-	"runtime/debug"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -12,7 +12,7 @@ var maxRoutines = 9999
 var routines = 0
 
 func init() {
-	debug.SetMaxThreads(maxRoutines + 1)
+	routines = runtime.NumGoroutine()
 }
 
 type WaitGroupInterface interface {
