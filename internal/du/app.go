@@ -94,7 +94,7 @@ func Execute(_ *cobra.Command, args []string) {
 
 	wg.Wait()
 
-	if pathIsFile {
+	if !pathIsFile {
 		color.Green(
 			fmt.Sprintf("%-8s %s\n",
 				strings.ReplaceAll(humanize.IBytes(total), " ", ""),
