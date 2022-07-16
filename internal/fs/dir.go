@@ -32,6 +32,10 @@ func (f *file) IsDir() bool {
 }
 
 func (f *file) Size() (uint64, error) {
+	if !f.i.IsDir() {
+		return uint64(f.i.Size()), nil
+	}
+
 	if f.size == nil {
 		size, err := dirSize(f.path, f.i)
 		f.size = &size
@@ -42,11 +46,7 @@ func (f *file) Size() (uint64, error) {
 }
 
 func dirSize(path string, info os.FileInfo) (uint64, error) {
-	if !info.IsDir() {
-		return uint64(info.Size()), nil
-	}
-
-	var size uint64 = 0
+	var size uint64
 	err := filepath.Walk(filepath.Join(path, info.Name()),
 		func(path string, info os.FileInfo, err error) error {
 			if err == nil {
