@@ -1,9 +1,9 @@
 package du
 
 import (
+	"context"
 	"fmt"
 	"github.com/bavix/dius/internal/fs"
-	"github.com/bavix/dius/internal/wgi"
 	"github.com/dustin/go-humanize"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -46,22 +48,24 @@ func Execute(_ *cobra.Command, args []string) {
 	if pathIsFile {
 		files = append(files, pathInfo)
 	} else {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		files, err = ioutil.ReadDir(path)
-		for attempts := 0; attempts < 10 && err != nil; attempts++ {
-			time.Sleep(time.Millisecond * 50)
-			files, err = ioutil.ReadDir(path)
+		for attempts := 0; err != nil; attempts++ {
+			select {
+			case <-ctx.Done():
+				log.Fatal(err)
+			default:
+				time.Sleep(time.Millisecond * time.Duration(attempts*10))
+				files, err = ioutil.ReadDir(path)
+			}
 		}
 	}
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	var total uint64
-	var wg wgi.WaitGroup
+	var wg sync.WaitGroup
+	wg.Add(len(files))
 	for _, file := range files {
-		wg.Add(1)
-
 		fi := fs.New(path, file)
 		go func() {
 			defer wg.Done()
@@ -76,7 +80,7 @@ func Execute(_ *cobra.Command, args []string) {
 				filename = path
 			}
 
-			total += bytes
+			atomic.AddUint64(&total, bytes)
 			line := fmt.Sprintf(
 				"%-8s %s\n",
 				strings.ReplaceAll(humanize.IBytes(bytes), " ", ""),

@@ -1,11 +1,9 @@
 package fs
 
 import (
-	"github.com/bavix/dius/internal/wgi"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"time"
+	"sync/atomic"
 )
 
 type FileInterface interface {
@@ -35,7 +33,7 @@ func (f *file) IsDir() bool {
 
 func (f *file) Size() (uint64, error) {
 	if f.size == nil {
-		size, err := fastSize(f.path, f.i)
+		size, err := dirSize(f.path, f.i)
 		f.size = &size
 		f.err = err
 	}
@@ -43,45 +41,24 @@ func (f *file) Size() (uint64, error) {
 	return *f.size, f.err
 }
 
-func fastSize(path string, info os.FileInfo) (uint64, error) {
+func dirSize(path string, info os.FileInfo) (uint64, error) {
 	if !info.IsDir() {
 		return uint64(info.Size()), nil
 	}
 
-	newPath := filepath.Join(path, info.Name())
-	files, err := ioutil.ReadDir(newPath)
-	for attempts := 0; attempts < 20 && err != nil; attempts++ {
-		time.Sleep(time.Millisecond * 50)
-		files, err = ioutil.ReadDir(newPath)
-	}
+	var size uint64 = 0
+	err := filepath.Walk(filepath.Join(path, info.Name()),
+		func(path string, info os.FileInfo, err error) error {
+			if err == nil {
+				atomic.AddUint64(&size, uint64(info.Size()))
+			}
+
+			return err
+		})
 
 	if err != nil {
 		return 0, err
 	}
 
-	var errSize error = nil
-	var size uint64 = 0
-	var wg wgi.WaitGroup
-	for _, file := range files {
-		if !file.IsDir() {
-			size += uint64(file.Size())
-			continue
-		}
-
-		wg.Add(1)
-		go func(f os.FileInfo) {
-			defer wg.Done()
-
-			sum, err := fastSize(newPath, f)
-			if err != nil {
-				errSize = err
-			}
-
-			size += sum
-		}(file)
-	}
-
-	wg.Wait()
-
-	return size, errSize
+	return size, nil
 }
