@@ -3,7 +3,7 @@ module github.com/bavix/dius
 go 1.25.0
 
 require (
-	github.com/dustin/go-humanize v1.0.1
+	github.com/dustin/go-humanize v1.1.0
 	github.com/fatih/color v1.19.0
 	github.com/spf13/cobra v1.10.2
 )
